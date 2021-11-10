@@ -1,84 +1,71 @@
 #include <iostream>
+#include <fstream>
 #include <cmath>
 #include <random>
 #include <Eigen/Dense>
+#include "QPSK.h"
 
 using namespace std;
 using namespace Eigen;
 
 const int N = 20;		// Vector dimention
-const int M = 1000000;		// Bits to Transmit
+const int M = 1E6;		// Bits to Transmit
 const double Amp = 10;	// Eb = 100;
-const double PI = 3.1415926535897932384626433832795028;
 
 int main(int argc, char* argv[])
 {
 	random_device rd;
 	mt19937_64 generator(rd());
-	uniform_int_distribution<int> idis(0, 1);
-	normal_distribution<double> gaussian(0, 100000.);
+	
+	fstream fio("QPSK20bits.csv", ios::out);
+	if (fio.fail()) { cout << "Cannot Open QPSK File!" << endl; return 1; }
 
-	/*
-		Build Biases
-	*/
-	VectorXd c0t(N), c1t(N);
-	for (int i = 0; i < N; i++)
+	QPSK qpskSim(N,20,Amp,10);
+	qpskSim.execute_Simulation(generator);
+	qpskSim.print_Send(fio);
+	qpskSim.print_Receive(fio);
+	cout << "EBR =\t" << qpskSim.EBR() << endl
+		<< "Es / N0 =\t" << 10 * log10(qpskSim.Eb() / 10) << endl << endl;
+	fio.close();
+
+	
+	fio.open("QPSK_Eb_over_N0.csv", ios::out);
+	if (fio.fail()) { cout << "Cannot Open SNR File!" << endl; return 1; }
+	for (double dB = 0; dB < 35; dB += 1./3.)
 	{
-		double f = 1.;
-		double t = (double)i / N;
-		c0t(i) = sqrt(2. / (double)N) * cos(2. * PI * f * t);
-		c1t(i) = sqrt(2. / (double)N) * sin(2. * PI * f * t);
+		double N0 = qpskSim.Eb() / pow(10., dB / 10.);
+
+		cout << "for  N0 = " << N0 << "..." << endl;
+		qpskSim.init(N, M, Amp, N0);
+		qpskSim.execute_Simulation(generator);
+		fio << dB << ", " << qpskSim.EBR() << endl;
 	}
-	cout << "c0t * c0t = " << c0t.dot(c0t) << endl;
-	cout << "c0t * c1t = " << c0t.dot(c1t) << endl;
-	cout << "c1t * c0t = " << c1t.dot(c0t) << endl;
-	cout << "c1t * c1t = " << c1t.dot(c1t) << endl << endl;
+	fio.close();
 
-	/*
-		Sender
-	*/
+	fio.open("16QAM20bits.csv", ios::out);
+	if (fio.fail()) { cout << "Cannot Open 16QAM File!" << endl; return 1; }
 
-	VectorXd data(M);
-	VectorXd* Send, * Received;
-	Send = new VectorXd[M / 2];
-	for (int i = 0; i < M / 2; i++)
+	QAM16 qam16Sim(N, 20, Amp / 4, 10);
+	qam16Sim.execute_Simulation(generator);
+	qam16Sim.print_Send(fio);
+	fio << endl;
+	qam16Sim.print_Receive(fio);
+	cout << "EBR =\t" << qam16Sim.EBR() << endl
+		<< "Es / N0 =\t" << 10 * log10(qam16Sim.Eb() / 10) << endl << endl;
+	fio.close();
+
+	fio.open("16QAM_Eb_over_N0.csv", ios::out);
+	if (fio.fail()) { cout << "Cannot Open SNR File!" << endl; return 1; }
+	for (double dB = 0; dB < 35; dB += 1. / 3.)
 	{
-		data(i * 2)		= idis(generator) * 2 - 1;
-		data(i * 2 + 1) = idis(generator) * 2 - 1;
-		Send[i] = Amp * (c0t * data(i * 2) + c1t * data(i * 2 + 1));
+		double N0 = qam16Sim.Eb() / pow(10., dB / 10.);
+
+		cout << "for  N0 = " << N0 << "..." << endl;
+		qam16Sim.init(N, M, Amp, N0);
+		qam16Sim.execute_Simulation(generator);
+		fio << dB << ", " << qam16Sim.EBR() << endl;
 	}
+	fio.close();
 
-	/*
-		Channel
-	*/
-
-	Received = new VectorXd[M / 2];
-	for (int i = 0; i < M / 2; i++)
-	{
-		Received[i] = Send[i];
-		for (auto& A : Received[i])
-		{
-			A += gaussian(generator);
-		}
-	}
-
-	/*
-		Receiver
-	*/
-	double EBR = 0.0;
-
-	VectorXd Decode(M);
-	for (int i = 0; i < M / 2; i++)
-	{
-		Decode(i * 2)	  = Received[i].dot(c0t) / Amp > 0 ? 1 : -1;
-		Decode(i * 2 + 1) = Received[i].dot(c1t) / Amp > 0 ? 1 : -1;
-
-		if (Decode(i * 2)	  != data(i * 2))	  EBR++;
-		if (Decode(i * 2 + 1) != data(i * 2 + 1)) EBR++;
-	}
-	EBR = EBR / M;
-	cout << "EBR = " << EBR << endl << endl;
-
-	delete[] Send, Received;
 	return 0;
 }
