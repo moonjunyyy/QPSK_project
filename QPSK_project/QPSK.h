@@ -36,11 +36,13 @@ public :
 	void send_Data();
 	void recieve_Channel(double sigma, mt19937_64& rnd);
 	void decode_Data();
+	void evaluate_Data();
 
 	void execute_Simulation(mt19937_64& rnd);
 	void test_Orthonomality(ostream& os);
 	void print_Send(ostream& os);
 	void print_Receive(ostream& os);
+	void print_Decode(ostream& os);
 
 	double EBR();
 	double Eb();
@@ -73,11 +75,13 @@ public:
 	void send_Data();
 	void recieve_Channel(double sigma, mt19937_64& rnd);
 	void decode_Data();
+	void evaluate_Data();
 
 	void execute_Simulation(mt19937_64& rnd);
 	void test_Orthonomality(ostream& os);
 	void print_Send(ostream& os);
 	void print_Receive(ostream& os);
+	void print_Decode(ostream& os);
 
 	double EBR();
 	double Eb();

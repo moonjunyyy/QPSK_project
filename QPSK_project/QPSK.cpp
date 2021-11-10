@@ -50,15 +50,23 @@ void QPSK::recieve_Channel(double sigma, mt19937_64& rnd)
 	}
 }
 
+
+
 void QPSK::decode_Data()
 {
 	for (int i = 0; i < Bit / 2; i++)
 	{
-		decode(i * 2) = received[i].dot(c0t) / Amp > 0 ? 1 : -1;
-		decode(i * 2 + 1) = received[i].dot(c1t) / Amp > 0 ? 1 : -1;
+		decode(i * 2) = received[i].dot(c0t) / Amp;
+		decode(i * 2 + 1) = received[i].dot(c1t) / Amp;
+	}
+}
 
-		if (decode(i * 2) != data(i * 2))	  ebr++;
-		if (decode(i * 2 + 1) != data(i * 2 + 1)) ebr++;
+void QPSK::evaluate_Data()
+{
+	for (int i = 0; i < Bit; i++)
+	{
+		decode(i) = decode(i) > 0 ? 1 : -1;
+		if (decode(i) != data(i)) ebr++;
 	}
 	ebr = ebr / (double)Bit;
 }
@@ -70,6 +78,7 @@ void QPSK::execute_Simulation(mt19937_64& rnd)
 	send_Data();
 	recieve_Channel(sqrt(N0 / 2), rnd);
 	decode_Data();
+	evaluate_Data();
 }
 
 void QPSK::test_Orthonomality(ostream& os)
@@ -103,6 +112,14 @@ void QPSK::print_Receive(ostream& os)
 		{
 			os << i++ << ", " << D << endl;
 		}
+	}
+}
+
+void QPSK::print_Decode(ostream& os)
+{
+	for (int i = 0; i < Bit / 2; i++)
+	{
+		os << decode(i * 2) << ", " << decode(i * 2 + 1) << endl;
 	}
 }
 
@@ -187,53 +204,67 @@ void QAM16::decode_Data()
 	{
 		double r1 = (received[i].dot(c0t) / Amp);
 		double r2 = (received[i].dot(c1t) / Amp);
-
-		if(r1 > 2)
-		{
-			decode(i * 4) = 1;
-			decode(i * 4 + 1) = 0;
-		}
-		else if (r1 > 0)
-		{
-			decode(i * 4) = 1;
-			decode(i * 4 + 1) = 1;
-		}
-		else if (r1 > -2)
-		{
-			decode(i * 4) = 0;
-			decode(i * 4 + 1) = 1;
-		}
-		else
-		{
-			decode(i * 4) = 0;
-			decode(i * 4 + 1) = 0;
-		}
-
-		if (r2 > 2)
-		{
-			decode(i * 4 + 2) = 1;
-			decode(i * 4 + 3) = 0;
-		}
-		else if (r2 > 0)
-		{
-			decode(i * 4 + 2) = 1;
-			decode(i * 4 + 3) = 1;
-		}
-		else if (r2 > -2)
-		{
-			decode(i * 4 + 2) = 0;
-			decode(i * 4 + 3) = 1;
-		}
-		else
-		{
-			decode(i * 4 + 2) = 0;
-			decode(i * 4 + 3) = 0;
-		}
-
-		if (decode(i * 2) != data(i * 2))	  ebr++;
-		if (decode(i * 2 + 1) != data(i * 2 + 1)) ebr++;
+		
+		decode(i * 4) = r1;
+		decode(i * 4 + 1) = r1;
+		decode(i * 4 + 2) = r2;
+		decode(i * 4 + 3) = r2;
 	}
-	ebr = ebr / (double)Bit;
+}
+
+void QAM16::evaluate_Data()
+{
+	for (int i = 0; i < Bit / 4; i++)
+	{
+		double r1 = decode(i * 4);
+		double r2 = decode(i * 4 + 2);
+
+		if (r1 > 2.)
+		{
+			decode(i * 4)	  = 1;
+			decode(i * 4 + 1) = 0;
+		}
+		else if (r1 > 0.)
+		{
+			decode(i * 4)	  = 1;
+			decode(i * 4 + 1) = 1;
+		}
+		else if (r1 > -2.)
+		{
+			decode(i * 4)	  = 0;
+			decode(i * 4 + 1) = 1;
+		}
+		else
+		{
+			decode(i * 4)	  = 0;
+			decode(i * 4 + 1) = 0;
+		}
+		if (r2 > 2.)
+		{
+			decode(i * 4 + 2) = 1;
+			decode(i * 4 + 3) = 0;
+		}
+		else if (r2 > 0.)
+		{
+			decode(i * 4 + 2) = 1;
+			decode(i * 4 + 3) = 1;
+		}
+		else if (r2 > -2.)
+		{
+			decode(i * 4 + 2) = 0;
+			decode(i * 4 + 3) = 1;
+		}
+		else
+		{
+			decode(i * 4 + 2) = 0;
+			decode(i * 4 + 3) = 0;
+		}
+	}
+	for (int i = 0; i < Bit; i++)
+	{
+		if (decode(i) != data(i)) ebr++;
+	}
+	ebr /= Bit;
 }
 
 void QAM16::execute_Simulation(mt19937_64& rnd)
@@ -276,6 +307,14 @@ void QAM16::print_Receive(ostream& os)
 		{
 			os << i++ << ", " << D << endl;
 		}
+	}
+}
+
+void QAM16::print_Decode(ostream& os)
+{
+	for (int i = 0; i < Bit / 4; i++)
+	{
+		os << decode(i * 4) << ", " << decode(i * 4 + 2) << endl;
 	}
 }
 
