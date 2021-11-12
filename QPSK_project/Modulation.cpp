@@ -296,7 +296,7 @@ void QAM16::print_Decode(ostream& os)
 
 double QAM16::Eb()
 {
-	return 15 * Amp * Amp;
+	return 15 * Amp * Amp / 4;
 }
 
 void PSK16::send_Data()
@@ -309,8 +309,8 @@ void PSK16::send_Data()
 			+ ((data(i * 4 + 3) > 0));
 
 		dat = graycode(dat);
-		double d1 = cos(PI * dat / 8);
-		double d2 = sin(PI * dat / 8);
+		double d1 = cos(PI * (double)dat / 8);
+		double d2 = sin(PI * (double)dat / 8);
 
 		auto s_dat = Amp * (d1 * c0t + d2 * c1t);
 		send.push_back(s_dat);
